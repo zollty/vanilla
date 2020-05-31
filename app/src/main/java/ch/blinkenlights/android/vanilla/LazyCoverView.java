@@ -28,6 +28,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.LruCache;
 import android.widget.ImageView;
 
@@ -135,15 +136,18 @@ public class LazyCoverView extends ImageView
 				// This message was sent due to a cache miss, but the cover might got cached in the meantime
 				Bitmap bitmap = sBitmapLruCache.get(payload.key);
 				if (bitmap == null) {
-					if (payload.key.mediaType == MediaUtils.TYPE_ALBUM) {
-						// We only display real covers for queries using the album id as key
-						Song song = MediaUtils.getSongByTypeId(mContext, payload.key.mediaType, payload.key.mediaId);
-						if (song != null) {
-							bitmap = song.getSmallCover(mContext);
-						}
-					} else {
-						bitmap = CoverBitmap.generatePlaceholderCover(mContext, CoverCache.SIZE_SMALL, CoverCache.SIZE_SMALL, payload.title);
-					}
+				    // modified by zollty 10 lines
+//					if (payload.key.mediaType == MediaUtils.TYPE_ALBUM) {
+//						// We only display real covers for queries using the album id as key
+//						Song song = MediaUtils.getSongByTypeId(mContext, payload.key.mediaType, payload.key.mediaId);
+//						if (song != null) {
+//							bitmap = song.getSmallCover(mContext);
+//						}
+//					} else {
+//						bitmap = CoverBitmap.generatePlaceholderCover(mContext, CoverCache.SIZE_SMALL, CoverCache.SIZE_SMALL, payload.title);
+//					}
+					//Log.v("VanillaMusic", payload.key.mediaId + " got the title = " + payload.title);
+					bitmap = CoverBitmap.generatePlaceholderCover(mContext, CoverCache.SIZE_SMALL, CoverCache.SIZE_SMALL, payload.title);
 					if (bitmap == null) {
 						// item has no cover: return a failback
 						bitmap = sFallbackBitmap;

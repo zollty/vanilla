@@ -92,6 +92,17 @@ public class PreferencesActivity extends PreferenceActivity
 		}
 	}
 
+//	@Override
+//	public boolean onOptionsItemSelected(MenuItem item)
+//	{
+//		if (item.getItemId() != android.R.id.home) {
+//			return super.onOptionsItemSelected(item);
+//		} else {
+//			finish();
+//			return true;
+//		}
+//	}
+
 	@Override
 	public void onSharedPreferenceChanged (SharedPreferences sharedPreferences, String key) {
 		if (PrefKeys.SELECTED_THEME.equals(key)) {
@@ -238,36 +249,36 @@ public class PreferencesActivity extends PreferenceActivity
 		}
 	}
 
-	public static class HelpFragment extends PreferenceFragment {
-		@Override
-		public void onCreate(Bundle savedInstanceState)
-		{
-			super.onCreate(savedInstanceState);
-
-			Activity activity = getActivity();
-			Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/vanilla-music/vanilla-music.github.io/wiki"));
-			if (intent != null) {
-				startActivity(intent);
-			}
-			activity.finish();
-		}
-	}
-
-	public static class AboutFragment extends WebViewFragment {
-		@Override
-		public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-		{
-			WebView view = (WebView)super.onCreateView(inflater, container, savedInstanceState);
-			view.getSettings().setJavaScriptEnabled(true);
-
-			TypedValue value = new TypedValue();
-			getActivity().getTheme().resolveAttribute(R.attr.overlay_foreground_color, value, true);
-			String fontColor = TypedValue.coerceToString(value.type, value.data);
-			view.loadUrl("file:///android_asset/about.html?"+Uri.encode(fontColor));
-			view.setBackgroundColor(Color.TRANSPARENT);
-			return view;
-		}
-	}
+//	public static class HelpFragment extends PreferenceFragment {
+//		@Override
+//		public void onCreate(Bundle savedInstanceState)
+//		{
+//			super.onCreate(savedInstanceState);
+//
+//			Activity activity = getActivity();
+//			Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/vanilla-music/vanilla-music.github.io/wiki"));
+//			if (intent != null) {
+//				startActivity(intent);
+//			}
+//			activity.finish();
+//		}
+//	}
+//
+//	public static class AboutFragment extends WebViewFragment {
+//		@Override
+//		public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
+//		{
+//			WebView view = (WebView)super.onCreateView(inflater, container, savedInstanceState);
+//			view.getSettings().setJavaScriptEnabled(true);
+//
+//			TypedValue value = new TypedValue();
+//			getActivity().getTheme().resolveAttribute(R.attr.overlay_foreground_color, value, true);
+//			String fontColor = TypedValue.coerceToString(value.type, value.data);
+//			view.loadUrl("file:///android_asset/about.html?"+Uri.encode(fontColor));
+//			view.setBackgroundColor(Color.TRANSPARENT);
+//			return view;
+//		}
+//	}
 
 	public static class HeadsetLaunchFragment extends PreferenceFragment {
 		@Override

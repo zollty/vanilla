@@ -99,16 +99,16 @@ public class FourSquareWidget extends AppWidgetProvider {
 		if ((state & PlaybackService.FLAG_NO_MEDIA) != 0) {
 			views.setViewVisibility(R.id.buttons, View.INVISIBLE);
 			views.setViewVisibility(R.id.title, View.INVISIBLE);
-			views.setInt(R.id.artist, "setText", R.string.no_songs);
+			//views.setInt(R.id.artist, "setText", R.string.no_songs);
 		} else if (song == null) {
 			views.setViewVisibility(R.id.buttons, View.VISIBLE);
 			views.setViewVisibility(R.id.title, View.INVISIBLE);
-			views.setInt(R.id.artist, "setText", R.string.app_name);
+			//views.setInt(R.id.artist, "setText", R.string.app_name);
 		} else {
 			views.setViewVisibility(R.id.title, View.VISIBLE);
 			views.setViewVisibility(R.id.buttons, View.VISIBLE);
 			views.setTextViewText(R.id.title, song.title);
-			views.setTextViewText(R.id.artist, song.artist);
+			//views.setTextViewText(R.id.artist, song.artist);
 			cover = song.getCover(context);
 			playResource = playing ? R.drawable.hidden_pause : R.drawable.hidden_play;
 			nextResource = R.drawable.hidden_next;
@@ -118,7 +118,7 @@ public class FourSquareWidget extends AppWidgetProvider {
 		views.setImageViewResource(R.id.next, nextResource);
 
 		if (cover == null) {
-			views.setImageViewResource(R.id.cover, R.drawable.fallback_cover_large);
+			views.setImageViewResource(R.id.cover, R.drawable.default_cover_large);
 		} else {
 			views.setImageViewBitmap(R.id.cover, cover);
 		}

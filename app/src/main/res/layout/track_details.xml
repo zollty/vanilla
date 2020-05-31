@@ -88,20 +88,21 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 	</TableRow>
 
 	<TableRow>
-		<TextView
-			android:text="@string/_path"
-			android:textColor="?overlay_foreground_color"
-			android:paddingRight="5dip"
-			android:gravity="right" />
-		<TextView android:id="@+id/path" android:textColor="?overlay_foreground_color" />
-	</TableRow>
-
-	<TableRow>
+	        <!-- chang to format by zollty -->
 		<TextView
 			android:text="@string/_format"
 			android:textColor="?overlay_foreground_color"
 			android:paddingRight="5dip"
 			android:gravity="right" />
 		<TextView android:id="@+id/format" android:textColor="?overlay_foreground_color" />
+	</TableRow>
+
+	<TableRow>
+		<TextView
+			android:text="@string/_path"
+			android:textColor="?overlay_foreground_color"
+			android:paddingRight="5dip"
+			android:gravity="right" />
+		<TextView android:id="@+id/path" android:textColor="?overlay_foreground_color" />
 	</TableRow>
 </merge>

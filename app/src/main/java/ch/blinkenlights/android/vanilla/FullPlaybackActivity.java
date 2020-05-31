@@ -87,14 +87,14 @@ public class FullPlaybackActivity extends SlidingPlaybackActivity
 	 */
 	private Song mCurrentSong;
 
-	private String mGenre;
-	private TextView mGenreView;
-	private String mTrack;
-	private TextView mTrackView;
-	private String mYear;
-	private TextView mYearView;
-	private String mComposer;
-	private TextView mComposerView;
+//	private String mGenre;
+//	private TextView mGenreView;
+//	private String mTrack;
+//	private TextView mTrackView;
+//	private String mYear;
+//	private TextView mYearView;
+//	private String mComposer;
+//	private TextView mComposerView;
 	private String mPath;
 	private TextView mPathView;
 	private String mFormat;
@@ -155,10 +155,10 @@ public class FullPlaybackActivity extends SlidingPlaybackActivity
 
 		mQueuePosView = (TextView)findViewById(R.id.queue_pos);
 
-		mGenreView = (TextView)findViewById(R.id.genre);
-		mTrackView = (TextView)findViewById(R.id.track);
-		mYearView = (TextView)findViewById(R.id.year);
-		mComposerView = (TextView)findViewById(R.id.composer);
+//		mGenreView = (TextView)findViewById(R.id.genre);
+//		mTrackView = (TextView)findViewById(R.id.track);
+//		mYearView = (TextView)findViewById(R.id.year);
+//		mComposerView = (TextView)findViewById(R.id.composer);
 		mPathView = (TextView)findViewById(R.id.path);
 		mFormatView = (TextView)findViewById(R.id.format);
 		mReplayGainView = (TextView)findViewById(R.id.replaygain);
@@ -497,16 +497,17 @@ public class FullPlaybackActivity extends SlidingPlaybackActivity
 			return;
 
 		table.setColumnCollapsed(0, !visible);
+		// comment out by zollty 5 lines
 		// Make title, album, and artist multi-line when extra info is visible
-		boolean singleLine = !visible;
-		for (int i = 0; i != 3; ++i) {
-			TableRow row = (TableRow)table.getChildAt(i);
-			((TextView)row.getChildAt(1)).setSingleLine(singleLine);
-		}
-		// toggle visibility of all but the first three rows (the title/artist/
-		// album rows)
+//		boolean singleLine = !visible;
+//		for (int i = 0; i != 3; ++i) {
+//			TableRow row = (TableRow)table.getChildAt(i);
+//			((TextView)row.getChildAt(1)).setSingleLine(singleLine);
+//		}
 		int visibility = visible ? View.VISIBLE : View.GONE;
-		for (int i = table.getChildCount() - 1; i > 2 ; i--) {
+		// modified by zollty 2 lines
+//		for (int i = table.getChildCount() - 1; i > 2 ; i--) {
+		for (int i = table.getChildCount() - 1; i > 0 ; i--) {
 			table.getChildAt(i).setVisibility(visibility);
 		}
 		mExtraInfoVisible = visible;
@@ -522,10 +523,10 @@ public class FullPlaybackActivity extends SlidingPlaybackActivity
 	{
 		Song song = mCurrentSong;
 
-		mGenre = null;
-		mTrack = null;
-		mYear = null;
-		mComposer = null;
+//		mGenre = null;
+//		mTrack = null;
+//		mYear = null;
+//		mComposer = null;
 		mPath = null;
 		mFormat = null;
 		mReplayGain = null;
@@ -533,10 +534,10 @@ public class FullPlaybackActivity extends SlidingPlaybackActivity
 		if(song != null) {
 			MediaMetadataExtractor data = new MediaMetadataExtractor(song.path);
 
-			mGenre = data.getFirst(MediaMetadataExtractor.GENRE);
-			mTrack = song.getTrackAndDiscNumber();
-			mComposer = data.getFirst(MediaMetadataExtractor.COMPOSER);
-			mYear = data.getFirst(MediaMetadataExtractor.YEAR);
+//			mGenre = data.getFirst(MediaMetadataExtractor.GENRE);
+//			mTrack = song.getTrackAndDiscNumber();
+//			mComposer = data.getFirst(MediaMetadataExtractor.COMPOSER);
+//			mYear = data.getFirst(MediaMetadataExtractor.YEAR);
 			mPath = song.path;
 
 			mFormat = data.getFormat();
@@ -588,10 +589,10 @@ public class FullPlaybackActivity extends SlidingPlaybackActivity
 			loadExtraInfo();
 			break;
 		case MSG_COMMIT_INFO: {
-			mGenreView.setText(mGenre);
-			mTrackView.setText(mTrack);
-			mYearView.setText(mYear);
-			mComposerView.setText(mComposer);
+//			mGenreView.setText(mGenre);
+//			mTrackView.setText(mTrack);
+//			mYearView.setText(mYear);
+//			mComposerView.setText(mComposer);
 			mPathView.setText(mPath);
 			mFormatView.setText(mFormat);
 			mReplayGainView.setText(mReplayGain);

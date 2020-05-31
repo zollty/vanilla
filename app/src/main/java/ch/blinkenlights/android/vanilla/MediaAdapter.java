@@ -32,6 +32,7 @@ import android.database.DatabaseUtils;
 import android.provider.BaseColumns;
 import android.provider.MediaStore;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -242,7 +243,9 @@ public class MediaAdapter
 
 		mProjection = new String[mFields.length + 2];
 		mProjection[0] = BaseColumns._ID;
-		mProjection[1] = coverCacheKey;
+		// modified by zollty
+//		mProjection[1] = coverCacheKey;
+		mProjection[1] = BaseColumns._ID;
 		for (int i = 0; i < mFields.length; i++) {
 			mProjection[i + 2] = mFields[i];
 		}
@@ -518,13 +521,21 @@ public class MediaAdapter
 		// Add subtitle if media type has one.
 		switch (mType) {
 		case MediaUtils.TYPE_ALBUM:
-		case MediaUtils.TYPE_SONG:
+		    // modified by zollty
 			subtitle = cursor.getString(3);
 			subtitle = (subtitle == null ? DB_NULLSTRING_FALLBACK : subtitle);
+			break;
+		case MediaUtils.TYPE_SONG:
+		    // modified by zollty
+			//subtitle = cursor.getString(3);
+			//subtitle = (subtitle == null ? DB_NULLSTRING_FALLBACK : subtitle);
 
 			// Add album information for songs.
 			String subsub = (mType == MediaUtils.TYPE_SONG ? cursor.getString(4) : null);
-			subtitle += (subsub != null ? " · " + subsub : "");
+			// modified by zollty
+			//subtitle += (subsub != null ? " · " + subsub : "");
+			subtitle = (subsub != null ? subsub : "<No Artist>");
+
 			break;
 		}
 
@@ -547,7 +558,9 @@ public class MediaAdapter
 		if (subtitle == null) {
 			row.setText(title);
 		} else {
-			row.setText(title, subtitle);
+		    // modified by zollty
+//			row.setText(title, subtitle);
+			row.setText2(title, subtitle);
 		}
 		row.showDuration(duration != -1);
 		row.setDuration(duration);

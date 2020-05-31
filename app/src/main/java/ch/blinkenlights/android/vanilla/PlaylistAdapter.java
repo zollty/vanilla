@@ -116,12 +116,16 @@ public class PlaylistAdapter extends CursorAdapter implements Handler.Callback {
 
 		dview.setupLayout(DraggableRow.LAYOUT_DRAGGABLE);
 		dview.showDragger(mEditable);
-		dview.setText(title, album+", "+artist);
+		// modified by zollty
+//		dview.setText(title, album+", "+artist);
+		dview.setText2(title, artist);
 		dview.setTag(holder);
 		dview.setDuration(cursor.getLong(6));
 
 		LazyCoverView cover = dview.getCoverView();
-		cover.setCover(MediaUtils.TYPE_ALBUM, cursor.getLong(5), null);
+		// modified by zollty
+//		cover.setCover(MediaUtils.TYPE_ALBUM, cursor.getLong(5), null);
+		cover.setCover(MediaUtils.TYPE_ALBUM, cursor.getLong(5), title);
 	}
 
 	/**

@@ -834,7 +834,8 @@ public final class PlaybackService extends Service
 					// a link to it
 					mMediaPlayer.setNextMediaPlayer(mPreparedMediaPlayer);
 				}
-			} catch (IOException e) {
+			} catch (IOException | IllegalArgumentException e) {
+				Log.e("VanillaMusic", "Exception while preparing gapless media player: " + e);
 				mMediaPlayer.setNextMediaPlayer(null);
 				mPreparedMediaPlayer.reset();
 			}
@@ -2150,7 +2151,7 @@ public final class PlaybackService extends Service
 		Bitmap cover = song.getCover(this);
 		if (cover == null) {
 			views.setImageViewResource(R.id.cover, R.drawable.fallback_cover);
-			expanded.setImageViewResource(R.id.cover, R.drawable.fallback_cover_large);
+			expanded.setImageViewResource(R.id.cover, R.drawable.default_cover_large);
 		} else {
 			views.setImageViewBitmap(R.id.cover, cover);
 			expanded.setImageViewBitmap(R.id.cover, cover);

@@ -243,7 +243,8 @@ public class Song implements Comparable<Song> {
 	 * @return The album art or null if no album art could be found
 	 */
 	public Bitmap getSmallCover(Context context) {
-		return getCoverInternal(context, CoverCache.SIZE_SMALL);
+		return null;
+		//return getCoverInternal(context, CoverCache.SIZE_SMALL);
 	}
 
 	/**
@@ -254,13 +255,15 @@ public class Song implements Comparable<Song> {
 	 * @return The album art or null if no album art could be found
 	 */
 	private Bitmap getCoverInternal(Context context, int size) {
-		if (CoverCache.mCoverLoadMode == 0 || id <= -1 || (flags & FLAG_NO_COVER) != 0)
+		// modified by zollty
+		if (CoverCache.mCoverLoadMode == 0 || id <= -1)
+//		if (CoverCache.mCoverLoadMode == 0 || id <= -1 || (flags & FLAG_NO_COVER) != 0)
 			return null;
 
 		if (sCoverCache == null)
 			sCoverCache = new CoverCache(context.getApplicationContext());
 
-		Bitmap cover = sCoverCache.getCoverFromSong(context, this, size);
+		Bitmap cover = sCoverCache.getCoverFromSong2(context, this, size);
 
 		if (cover == null)
 			flags |= FLAG_NO_COVER;

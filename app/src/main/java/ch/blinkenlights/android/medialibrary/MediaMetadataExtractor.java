@@ -243,7 +243,7 @@ public class MediaMetadataExtractor extends HashMap<String, ArrayList<String>> {
 	 */
 	public MediaMetadataExtractor(String path, boolean forceBastp) {
 		mForceBastp = forceBastp;
-		extractMetadata(path);
+		extractMetadata2(path);
 	}
 
 	/**
@@ -362,6 +362,155 @@ public class MediaMetadataExtractor extends HashMap<String, ArrayList<String>> {
 		mIsMediaFile = (containsKey(TITLE) || containsKey(ALBUM) || containsKey(ARTIST) || !bastpType.equals(""));
 
 		mediaTags.release();
+	}
+
+
+	private void extractMetadata2(String path) {
+		if (!isEmpty())
+			throw new IllegalStateException("Expected to be called on a clean HashMap");
+
+		Log.v("VanillaMusic", "Extracting tags from "+path);
+
+		HashMap bastpTags = (new Bastp()).getTags(path);
+		MediaMetadataRetriever mediaTags = new MediaMetadataRetriever();
+		boolean nativelyReadable = false;
+
+		try {
+			FileInputStream fis = new FileInputStream(path);
+			try {
+				mediaTags.setDataSource(fis.getFD());
+				nativelyReadable = true;
+			} catch (Exception e) {
+				// IGNORE...
+				// Log.v("VanillaMusic", "Error calling setDataSource for "+path+": "+e);
+			}
+			fis.close();
+		} catch (Exception e) {
+			nativelyReadable = false;
+			Log.v("VanillaMusic", "Error creating fis for "+path+": "+e);
+		}
+
+		// modified by zollty 12 lines. fix mp3 can not be recognized bug, since KEY_HAS_AUDIO maybe null
+		if (!nativelyReadable) {
+			mediaTags.release();
+			return;
+		}
+		//Log.v("VanillaMusic", "87RE path= " + path);
+		//Log.v("VanillaMusic", "87RE METADATA_KEY_HAS_AUDIO " + mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO));
+		//Log.v("VanillaMusic", "87RE METADATA_KEY_HAS_VIDEO " + mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO));
+		//Log.v("VanillaMusic", "87RE METADATA_KEY_DURATION " + mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+		// Check if this is a usable audio file
+		if (mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) != null ||
+		    mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION) == null) {
+		    mediaTags.release();
+			//Log.i("VanillaMusic", "E05 MIME_TYPE = " + mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE) + ", PATH = " + path);
+			Log.e("VanillaMusic", "E05 " + path + ", not a usable audio file, will return directly");
+			return;
+		}
+
+		// Bastp can not read the duration and bitrates, so we always get it from the system
+		ArrayList<String> duration = new ArrayList<>(1);
+		duration.add(mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+		this.put(DURATION, duration);
+
+		ArrayList<String> bitrate = new ArrayList<>(1);
+		bitrate.add(mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE));
+		this.put(BITRATE, bitrate);
+
+		ArrayList<String> mime = new ArrayList<>(1);
+		mime.add(mediaTags.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE));
+		this.put(MIME_TYPE, mime);
+
+
+		// ...but we are using bastp for FLAC, OGG and OPUS as it handles them well
+		// Everything else goes to the framework (such as pcm, m4a and mp3)
+		String bastpType = (bastpTags.containsKey("type") ? (String)bastpTags.get("type") : "");
+		switch (bastpType) {
+			case "FLAC":
+			case "OGG":
+			case "OPUS":
+				populateSelf(bastpTags);
+				break;
+			case "MP3/ID3v2":
+			case "MP3/Lame":
+			case "MP4":
+				// ^-- these tagreaders are not fully stable, but can be enabled on demand
+				if(mForceBastp) {
+					populateSelf(bastpTags);
+					break;
+				}
+				// else: fallthrough
+			default:
+				populateSelf(mediaTags);
+		}
+		convertNumericGenre();
+
+		// We consider this a media file if it has some common tags OR
+		// if bastp was able to parse it (which is stricter than Android's own parser)
+		mIsMediaFile = (containsKey(TITLE) || containsKey(ALBUM) || containsKey(ARTIST) || !bastpType.equals(""));
+		
+		// add by zollty 2 lines, solve the non ISO-8859-1 character encoding error problem
+		Log.v("VanillaMusic", "V01 mIsMediaFile = " + mIsMediaFile + ", PATH = " + path);
+		handleMP3TagEncoding(path);
+
+		mediaTags.release();
+	}
+
+	// add by zollty
+	private void handleMP3TagEncoding(String path) {
+		if(path.endsWith(".mp3")) {
+
+			String title = getFirst(MediaMetadataExtractor.TITLE);
+			//Log.v("VanillaMusic", "HJD title = " + title + ", PATH = " + path);
+
+			String album = getFirst(MediaMetadataExtractor.ALBUM);
+			//Log.v("VanillaMusic", "HJD album = " + album + ", PATH = " + path);
+
+			String artist = getFirst(MediaMetadataExtractor.ARTIST);
+			//Log.v("VanillaMusic", "HJD artist = " + artist + ", PATH = " + path);
+
+			if (!isUnset(title)) {
+				title = codeName(title);
+				updateFirst(MediaMetadataExtractor.TITLE, title);
+				//Log.v("VanillaMusic", "ds title = " + codeName(title) + ", PATH = " + path);
+			}
+			if (!isUnset(album)) {
+				album = codeName(album);
+				updateFirst(MediaMetadataExtractor.ALBUM, album);
+				//Log.v("VanillaMusic", "ds album = " + codeName(album) + ", PATH = " + path);
+			}
+			if (!isUnset(artist)) {
+				artist = codeName(artist);
+				updateFirst(MediaMetadataExtractor.ARTIST, artist);
+				//Log.v("VanillaMusic", "ds artist = " + codeName(artist) + ", PATH = " + path);
+			}
+		}
+	}
+	
+	// add by zollty
+	private void updateFirst(String key, String value) {
+		String result = null;
+		ArrayList<String> md = get(key);
+		md.clear();
+		md.add(value);
+	}
+	
+	// add by zollty
+	private static boolean isUnset(String s) {
+		return s == null || s.trim().isEmpty();
+	}
+	
+	// add by zollty
+	private static String codeName(String s) {
+
+		try {
+			if (s.equals(new String(s.getBytes("ISO-8859-1"), "ISO-8859-1"))) {
+				return new String (s.getBytes("ISO-8859-1"),"GBK");
+			}
+		} catch (Exception e) {
+			Log.e("VanillaMusic", "7878", e);
+		}
+		return s;
 	}
 
 	/**

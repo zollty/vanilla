@@ -507,6 +507,7 @@ public class MediaScanner implements Handler.Callback {
 		mustInsert = tags.isMediaFile();
 
 		if (mustInsert) {
+			Log.v("VanillaMusic", "MediaScanner: inserted " + path);
 			hasChanged = true;
 
 			// Clear old flags of this song:
@@ -642,7 +643,6 @@ public class MediaScanner implements Handler.Callback {
 			}
 		} // end if (mustInsert)
 
-		Log.v("VanillaMusic", "MediaScanner: inserted "+path);
 		return hasChanged;
 	}
 

@@ -17,18 +17,16 @@
 
 package ch.blinkenlights.android.vanilla;
 
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Bitmap;
-import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
-import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
@@ -37,8 +35,15 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
+
+import ch.blinkenlights.android.medialibrary.MediaLibrary;
 
 
 public class CoverCache {
@@ -93,7 +98,11 @@ public class CoverCache {
 	 */
 	public CoverCache(Context context) {
 		if (sBitmapDiskCache == null) {
-			sBitmapDiskCache = new BitmapDiskCache(context.getApplicationContext(), 25*1024*1024);
+		    // modified by zollty 4 lines.
+			//sBitmapDiskCache = new BitmapDiskCache(context.getApplicationContext(), 25*1024*1024);
+			sBitmapDiskCache = new BitmapDiskCache(context.getApplicationContext(), 100*1024*1024);
+			File path = context.getApplicationContext().getDatabasePath("covercache.db");
+			Log.v("VanillaMusic", "the covercache.db is " + path.getAbsolutePath());
 		}
 	}
 
@@ -105,7 +114,9 @@ public class CoverCache {
 	 * @return a bitmap or null if no artwork was found
 	 */
 	public Bitmap getCoverFromSong(Context ctx, Song song, int size) {
-		CoverKey key = new CoverCache.CoverKey(MediaUtils.TYPE_ALBUM, song.albumId, size);
+		// modified by zollty 2 lines. generate key with song.id instead of albumId
+//		CoverKey key = new CoverCache.CoverKey(MediaUtils.TYPE_ALBUM, song.albumId, size);
+		CoverKey key = new CoverCache.CoverKey(MediaUtils.TYPE_SONG, song.id, size);
 		Bitmap cover = getStoredCover(key);
 		if (cover == null) {
 			cover = sBitmapDiskCache.createBitmap(ctx, song, size*size);
@@ -115,6 +126,78 @@ public class CoverCache {
 			}
 		}
 		return cover;
+	}
+
+
+	public Bitmap getCoverFromSong2(Context ctx, Song song, int size) {
+		if(song.path.contains("10-MUSIC")) {
+
+			SharedPreferences settings = SharedPrefHelper.getSettings(ctx);
+			int msize = settings.getInt("mpic_size", 0);
+			if(msize > 0) {
+				// each song map a fixed value
+				int k = (int) (MediaLibrary.hash63(song.path) % msize);
+				// key is the id (base on k with song.path and pic files size)
+				CoverKey key = new CoverCache.CoverKey(0, k*10000 + k, 0);
+				//Log.e("VanillaMusic", song.path + ": " + key.hashCode());
+				Bitmap cover = getStoredCover(key);
+				if (cover != null) {
+					// Log.e("VanillaMusic", k + " load picture from cache. " + song.path);
+					return cover;
+				}
+			}
+			// at this point, it means not scanned or the cache is flushed
+			// so do scan and cache the picture
+
+			// xxxx/10-Music/music-gentle/S.H.E - 半糖主义.mp3
+			// xxxx/10-MPIC/
+			String picPathStr = song.path.substring(0, song.path.indexOf("10-MUSIC")) + "10-MPIC";
+			final File picPath = new File(picPathStr);
+			File[] files = picPath.listFiles();
+			if(files == null) {
+				Log.e("VanillaMusic", picPathStr + ": picPath not find");
+				return null;
+			}
+			List<File> fileList = new ArrayList<>();
+			for(File f: files) {
+				String tmp = f.getAbsolutePath();
+				if (tmp.endsWith(".jpg")
+					|| tmp.endsWith(".jpeg")
+					|| tmp.endsWith(".png")) {
+					fileList.add(f);
+				}
+			}
+			// sort list
+			Collections.sort(fileList, new Comparator<File>() {
+				@Override
+				public int compare(File o1, File o2) {
+			    return o1.getName().compareTo(o2.getName());
+				}
+			});
+			msize = fileList.size();
+
+			// each song map a fixed value
+			int k = (int) (MediaLibrary.hash63(song.path) % msize);
+			File picFile = fileList.get(k);
+			// key is the id (base on k with song.path and pic files size)
+			CoverKey key = new CoverCache.CoverKey(0, k*10000 + k, 0);
+			try {
+				//Log.v("VanillaMusic", k + " load picture "+ tmp +" for " + song.path);
+				Bitmap cover = sBitmapDiskCache.stream2Bitmap(new FileInputStream(picFile), new FileInputStream(picFile), size*size);
+				if (cover != null) {
+					Log.i("VanillaMusic", song.path + ": new " + key.hashCode());
+					storeCover(key, cover);
+				}
+				SharedPreferences.Editor ed = settings.edit();
+				ed.putInt("mpic_size", msize);
+				ed.apply();
+				return cover;
+			} catch (Exception e) {
+				Log.v("VanillaMusic", "Loading coverart for "+song+" failed with exception " + e);
+				return null;
+			}
+		}
+		return getCoverFromSong(ctx, song, size);
 	}
 
 	/**
@@ -330,7 +413,7 @@ public class CoverCache {
 		 * Stores a bitmap in the disk cache, does not update existing objects
 		 *
 		 * @param key The cover key to use
-		 * @param Bitmap The bitmap to store
+		 * @param cover The cover to store as bitmap
 		 */
 		public void put(CoverKey key, Bitmap cover) {
 			SQLiteDatabase dbh = getWritableDatabase();
@@ -386,10 +469,42 @@ public class CoverCache {
 			return cover;
 		}
 
+
+		public Bitmap stream2Bitmap(InputStream inputStream, InputStream sampleInputStream, long maxPxCount) {
+			if (inputStream != null) {
+				BitmapFactory.Options bopts = new BitmapFactory.Options();
+				bopts.inPreferredConfig  = Bitmap.Config.RGB_565;
+				bopts.inJustDecodeBounds = true;
+
+				final int inSampleSize   = getSampleSize(sampleInputStream, bopts, maxPxCount);
+				/* reuse bopts: we are now REALLY going to decode the image */
+				bopts.inJustDecodeBounds = false;
+				// modified by zollty 8 lines. just compress on need (when inSampleSize >3).
+				Bitmap bitmap = null;
+				if(inSampleSize > 3) {
+					// Log.v("VanillaMusic", "[maxPxCount=" + maxPxCount + "] compress cover for " + song.title + ", inSampleSize=" + inSampleSize);
+					bopts.inSampleSize = inSampleSize;
+					bitmap = BitmapFactory.decodeStream(inputStream, null, bopts);
+				} else {
+					bitmap = BitmapFactory.decodeStream(inputStream);
+				}
+				try {
+					sampleInputStream.close();
+					inputStream.close();
+				} catch (Exception e) {
+					// ignore...
+				}
+				return bitmap;
+			}
+
+			return null;
+		}
+
 		/**
 		 * Attempts to create a new bitmap object for given song.
 		 * Returns null if no cover art was found
 		 *
+		 * @param ctx The context to read the external content uri of the given song
 		 * @param song the function will search for artwork of this object
 		 * @param maxPxCount the maximum amount of pixels to return (30*30 = 900)
 		 */
@@ -401,63 +516,29 @@ public class CoverCache {
 				InputStream inputStream = null;
 				InputStream sampleInputStream = null; // same as inputStream but used for getSampleSize
 
+				// modified by zollty 37 lines. get song's cover picture from the external picture file(png,jpg...) instead of the track file(mp3 flag ape...)
 				if ((CoverCache.mCoverLoadMode & CoverCache.COVER_MODE_VANILLA) != 0) {
-					final File baseFile  = new File(song.path);  // File object of queried song
-					String bestMatchPath = null;                 // The best cover-path we found
-					int bestMatchIndex   = COVER_MATCHES.length; // The best cover-index/priority found
-					int loopCount        = 0;                    // Directory items loop counter
-
+					final File baseFile = new File(song.path);  // File object of queried song
 					// Only start search if the base directory of this file is NOT the public
 					// downloads folder: Picking files from there would lead to a false positive
 					// in most cases
 					if (baseFile.getParentFile().equals(sDownloadsDir) == false) {
 						for (final File entry : baseFile.getParentFile().listFiles()) {
-							for (int i=0; i < bestMatchIndex ; i++) {
-								// We are checking each file entry to see if it matches a known
-								// cover pattern. We abort on first hit as the Pattern array is sorted from good->meh
-								if (COVER_MATCHES[i].matcher(entry.toString()).matches()) {
-									bestMatchIndex = i;
-									bestMatchPath = entry.toString();
-									break;
-								}
-							}
-							// Stop loop if we found the best match or if we looped 150 times
-							if (loopCount++ > 150 || bestMatchIndex == 0)
+							String tmp = entry.getAbsolutePath();
+							int extIndex = tmp.lastIndexOf('.');
+							tmp = tmp.substring(0, extIndex);
+							extIndex = song.path.lastIndexOf('.');
+							String tmp2 = song.path.substring(0, extIndex);
+
+							if (tmp2.equals(tmp) &&
+								(entry.getAbsolutePath().endsWith(".jpg")
+									|| entry.getAbsolutePath().endsWith(".jpeg")
+									|| entry.getAbsolutePath().endsWith(".png"))) {
+								inputStream = new FileInputStream(entry);
+								sampleInputStream = new FileInputStream(entry);
 								break;
+							}
 						}
-					}
-
-					if (bestMatchPath != null) {
-						final File guessedFile = new File(bestMatchPath);
-						if (guessedFile.exists() && !guessedFile.isDirectory()) {
-							inputStream = new FileInputStream(guessedFile);
-							sampleInputStream = new FileInputStream(guessedFile);
-						}
-					}
-				}
-
-				if (inputStream == null && (CoverCache.mCoverLoadMode & CoverCache.COVER_MODE_SHADOW) != 0) {
-					final String shadowBase = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).getPath() + "/.vanilla";
-					final String shadowPath = shadowBase + "/" + (song.artist.replaceAll("/", "_"))+"/"+(song.album.replaceAll("/", "_"))+".jpg";
-
-					File guessedFile = new File(shadowPath);
-					if (guessedFile.exists() && !guessedFile.isDirectory()) {
-						inputStream = new FileInputStream(guessedFile);
-						sampleInputStream = new FileInputStream(guessedFile);
-					}
-				}
-
-				if (inputStream == null && (CoverCache.mCoverLoadMode & CoverCache.COVER_MODE_ANDROID) != 0) {
-					ContentResolver res = ctx.getContentResolver();
-					long[] androidIds = MediaUtils.getAndroidMediaIds(ctx, song);
-					long albumId = androidIds[1];
-
-					if (albumId != -1) {
-						// now we can query for the album art path if we found an album id
-						Uri uri =  Uri.parse("content://media/external/audio/albumart/"+albumId);
-						sampleInputStream = res.openInputStream(uri);
-						if (sampleInputStream != null) // cache misses are VERY expensive here, so we check if the first open worked
-							inputStream = res.openInputStream(uri);
 					}
 				}
 
@@ -473,20 +554,7 @@ public class CoverCache {
 					mmr.release();
 				}
 
-				if (inputStream != null) {
-					BitmapFactory.Options bopts = new BitmapFactory.Options();
-					bopts.inPreferredConfig  = Bitmap.Config.RGB_565;
-					bopts.inJustDecodeBounds = true;
-
-					final int inSampleSize   = getSampleSize(sampleInputStream, bopts, maxPxCount);
-					/* reuse bopts: we are now REALLY going to decode the image */
-					bopts.inJustDecodeBounds = false;
-					bopts.inSampleSize       = inSampleSize;
-					Bitmap bitmap = BitmapFactory.decodeStream(inputStream, null, bopts);
-					sampleInputStream.close();
-					inputStream.close();
-					return bitmap;
-				}
+				return stream2Bitmap(inputStream, sampleInputStream, maxPxCount);
 			} catch (Exception e) {
 				// no cover art found
 				Log.v("VanillaMusic", "Loading coverart for "+song+" failed with exception "+e);

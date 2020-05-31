@@ -118,7 +118,7 @@ public final class CoverBitmap {
 	{
 		switch (style) {
 		case STYLE_OVERLAPPING_BOX:
-			return createOverlappingBitmap(context, coverArt, song, width, height);
+			return createOverlappingBitmap2(context, coverArt, song, width, height);
 		case STYLE_INFO_BELOW:
 			return createSeparatedBitmap(context, coverArt, song, width, height);
 		case STYLE_NO_INFO:
@@ -309,6 +309,92 @@ public final class CoverBitmap {
 		sourceWidth *= scale;
 		sourceHeight *= scale;
 		return Bitmap.createScaledBitmap(source, sourceWidth, sourceHeight, true);
+	}
+
+	private static Bitmap createOverlappingBitmap2(Context context, Bitmap cover, Song song, int width, int height) {
+		if (TEXT_SIZE == -1)
+			loadTextSizes(context);
+
+		Paint paint = new Paint();
+		paint.setAntiAlias(true);
+
+		String title = song.title == null ? "" : song.title;
+		// modified by zollty 2 lines. remove the album and artist text.
+		//String album = song.album == null ? "" : song.album;
+		//String artist = song.artist == null ? "" : song.artist;
+
+		int titleSize = TEXT_SIZE_BIG;
+		int subSize = TEXT_SIZE;
+		int padding = PADDING;
+
+		paint.setTextSize(titleSize);
+		int titleWidth = (int)paint.measureText(title);
+		paint.setTextSize(subSize);
+		// modified by zollty 5 lines. remove the album and artist text.
+		//int albumWidth = (int)paint.measureText(album);
+		//int artistWidth = (int)paint.measureText(artist);
+
+//		int boxWidth = Math.min(width, Math.max(titleWidth, Math.max(artistWidth, albumWidth)) + padding * 2);
+//		int boxHeight = Math.min(height, titleSize + subSize * 2 + padding * 4);
+		int boxWidth = Math.min(width, titleWidth + padding * 2);
+		int boxHeight = Math.min(height, titleSize + padding * 2);
+
+		int coverWidth;
+		int coverHeight;
+
+		if (cover == null) {
+			coverWidth = 0;
+			coverHeight = 0;
+		} else {
+			coverWidth = cover.getWidth();
+			coverHeight = cover.getHeight();
+
+			float scale = Math.min((float)width / coverWidth, (float)height / coverHeight);
+
+			coverWidth *= scale;
+			coverHeight *= scale;
+		}
+
+		int bitmapWidth = Math.max(coverWidth, boxWidth);
+		int bitmapHeight = Math.max(coverHeight, boxHeight);
+
+		Bitmap bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+		Canvas canvas = new Canvas(bitmap);
+
+		if (cover != null) {
+			int x = (bitmapWidth - coverWidth) / 2;
+			int y = (bitmapHeight - coverHeight) / 2;
+			Rect rect = new Rect(x, y, x + coverWidth, y + coverHeight);
+			canvas.drawBitmap(cover, null, rect, paint);
+		}
+
+		int left = (bitmapWidth - boxWidth) / 2;
+		int top = (bitmapHeight - boxHeight) / 2;
+		int right = (bitmapWidth + boxWidth) / 2;
+		int bottom = (bitmapHeight + boxHeight) / 2;
+
+		paint.setARGB(150, 0, 0, 0);
+		// add by zollty 1 lines. make it transparent.
+		paint.setAlpha(48);
+		canvas.drawRect(left, top, right, bottom, paint);
+
+		int maxWidth = boxWidth - padding * 2;
+		paint.setARGB(255, 255, 255, 255);
+		top += padding;
+		left += padding;
+
+		paint.setTextSize(titleSize);
+		drawText(canvas, title, left, top, titleWidth, maxWidth, paint);
+		// modified by zollty 7 lines. remove the album and artist text.
+		//top += titleSize + padding;
+
+		//paint.setTextSize(subSize);
+		//drawText(canvas, album, left, top, albumWidth, maxWidth, paint);
+		//top += subSize + padding;
+
+		//drawText(canvas, artist, left, top, artistWidth, maxWidth, paint);
+
+		return bitmap;
 	}
 
 	/**

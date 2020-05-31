@@ -36,6 +36,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.IOException;
 
 public class MediaLibrary  {
 
@@ -146,7 +147,7 @@ public class MediaLibrary  {
 			}
 
 			if (prefs.mediaFolders == null || prefs.mediaFolders.size() == 0)
-				prefs.mediaFolders = discoverDefaultMediaPaths(context);
+				prefs.mediaFolders = discoverDefaultMediaPaths2(context);
 
 			if (prefs.blacklistedFolders == null) // we allow this to be empty, but it must not be null.
 				prefs.blacklistedFolders = discoverDefaultBlacklistedPaths(context);
@@ -196,6 +197,55 @@ public class MediaLibrary  {
 		return defaultPaths;
 	}
 
+
+	private static ArrayList<String> discoverDefaultMediaPaths2(Context context) {
+		ArrayList<String> defaultPaths = new ArrayList<>();
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			// Running on a platform which enforces scoped access, so we blindly accept all dirs.
+			for (File file : context.getExternalMediaDirs()) {
+				defaultPaths.add(file.getAbsolutePath() + "/Music");
+			}
+		} else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+			// Try to discover media paths using getExternalMediaDirs() on 5.x and newer
+			for (File file : context.getExternalMediaDirs()) {
+				// Seems to happen on some Samsung 5.x devices. :-(
+				if (file == null)
+					continue;
+
+				String path = file.getAbsolutePath();
+				int match = path.indexOf("/Android/media/"); // From Environment.DIR_ANDROID + Environment.DIR_MEDIA (both hidden)
+				if (match >= 0)
+					defaultPaths.add(path.substring(0, match) + "/Music");
+			}
+		}
+
+		// Fall back to old API and some guessing if nothing was found (yet).
+		if (defaultPaths.size() == 0) {
+			// this should always exist
+			Log.i("VanillaMusic", "add default path: getExternalStorageDirectory=" + Environment.getExternalStorageDirectory().getAbsolutePath());
+			// getExternalStorageDirectory = /storage/emulated/0, android 4.2+, this is the default external storage path (equal to /storage/sdcard0 )
+			defaultPaths.add(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Music");
+			// this *may* exist
+			File sdCard = new File("/storage/sdcard1");
+			if (sdCard.isDirectory())
+				defaultPaths.add(sdCard.getAbsolutePath());
+		}
+
+		File udisk0 = new File("/storage/udisk0");
+		if (udisk0.isDirectory()) {
+			defaultPaths.add(udisk0.getAbsolutePath());
+		}
+		File udisk1 = new File("/storage/udisk1");
+		if (udisk1.isDirectory()) {
+			defaultPaths.add(udisk1.getAbsolutePath());
+		}
+
+		Log.i("VanillaMusic", "add default paths: " + defaultPaths);
+
+		return defaultPaths;
+	}
+
 	/**
 	 * Returns default paths which should be blacklisted
 	 *
@@ -225,10 +275,20 @@ public class MediaLibrary  {
 	public static void setPreferences(Context context, MediaLibrary.Preferences prefs) {
 		MediaLibraryBackend backend = getBackend(context);
 
-		try (ObjectOutputStream oos = new ObjectOutputStream(context.openFileOutput(PREFERENCES_FILE, 0))) {
+		ObjectOutputStream oos = null;
+		try {
+			oos = new ObjectOutputStream(context.openFileOutput(PREFERENCES_FILE, 0));
 			oos.writeObject(prefs);
 		} catch (Exception e) {
 			Log.w("VanillaMusic", "Failed to store media preferences: " + e);
+		} finally {
+			if(oos != null) {
+				try {
+					oos.close();
+				} catch (IOException e) {
+					// ingore
+				}
+			}
 		}
 
 		sPreferences = prefs;

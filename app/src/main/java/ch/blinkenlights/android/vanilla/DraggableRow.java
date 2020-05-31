@@ -22,6 +22,7 @@ import android.graphics.Color;
 import android.text.format.DateUtils;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.style.AbsoluteSizeSpan;
 import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -182,19 +183,30 @@ public class DraggableRow extends LinearLayout implements Checkable {
 		mTextView.setText(line);
 	}
 
-	/**
-	 * Display two lines
-	 *
-	 * @param line1 the first line to show
-	 * @param line2 the second line to show
-	 */
-	public void setText(CharSequence line1, CharSequence line2) {
+//	/**
+//	 * Display two lines
+//	 *
+//	 * @param line1 the first line to show
+//	 * @param line2 the second line to show
+//	 */
+//	public void setText(CharSequence line1, CharSequence line2) {
+//		if (line1 == null)
+//			line1 = "???";
+//
+//		SpannableStringBuilder sb = new SpannableStringBuilder(line1);
+//		sb.append("\n");
+//		sb.append(line2);
+//		sb.setSpan(new ForegroundColorSpan(Color.GRAY), line1.length() + 1, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+//		mTextView.setText(sb);
+//	}
+
+	public void setText2(CharSequence line1, CharSequence line2) {
 		if (line1 == null)
-			line1 = "???";
+			line1 = "<No Title>";
 
 		SpannableStringBuilder sb = new SpannableStringBuilder(line1);
-		sb.append("\n");
-		sb.append(line2);
+		sb.append(" - ").append(line2);
+		sb.setSpan(new AbsoluteSizeSpan(18, true), 0, line1.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 		sb.setSpan(new ForegroundColorSpan(Color.GRAY), line1.length() + 1, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 		mTextView.setText(sb);
 	}
